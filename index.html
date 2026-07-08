@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mám na teba otázku 💌</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  body {
+    background: linear-gradient(160deg, #2b1055 0%, #7597de 55%, #ffb6c1 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* plávajúce srdiečka na pozadí */
+  .bg-heart {
+    position: absolute;
+    bottom: -10vh;
+    font-size: 24px;
+    opacity: 0.35;
+    animation: floatUp linear infinite;
+    pointer-events: none;
+    user-select: none;
+  }
+  @keyframes floatUp {
+    from { transform: translateY(0) rotate(0deg); }
+    to   { transform: translateY(-120vh) rotate(30deg); }
+  }
+
+  .card {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 36px 28px;
+    width: min(92vw, 420px);
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 28px;
+    box-shadow: 0 20px 60px rgba(43, 16, 85, 0.35);
+  }
+
+  .emoji-top {
+    font-size: 64px;
+    display: inline-block;
+    animation: beat 1.2s ease-in-out infinite;
+  }
+  @keyframes beat {
+    0%, 100% { transform: scale(1); }
+    30% { transform: scale(1.18); }
+    50% { transform: scale(1); }
+  }
+
+  h1 {
+    margin-top: 14px;
+    font-size: clamp(26px, 7vw, 34px);
+    color: #2b1055;
+    line-height: 1.25;
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    color: #6b5b8a;
+    font-size: 15px;
+  }
+
+  .buttons {
+    margin-top: 30px;
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    align-items: center;
+    min-height: 90px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    border: none;
+    border-radius: 999px;
+    padding: 16px 34px;
+    font-size: 19px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    font-family: inherit;
+  }
+  button:active { transform: scale(0.95); }
+
+  #btnAno {
+    background: linear-gradient(135deg, #ff5e8a, #ff2d6f);
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(255, 45, 111, 0.45);
+    transition: transform 0.25s ease, font-size 0.25s ease, padding 0.25s ease;
+  }
+
+  #btnNie {
+    background: #e9e4f2;
+    color: #6b5b8a;
+    position: relative;
+  }
+  #btnNie.fleeing {
+    position: fixed;
+    z-index: 5;
+    transition: left 0.18s ease, top 0.18s ease;
+  }
+
+  .hint {
+    margin-top: 18px;
+    font-size: 13px;
+    color: #a897c4;
+    min-height: 18px;
+  }
+
+  /* oslava */
+  #celebration { display: none; }
+  #celebration.show { display: block; animation: pop 0.5s cubic-bezier(0.18, 1.4, 0.4, 1); }
+  @keyframes pop {
+    from { transform: scale(0.4); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  #celebration .big { font-size: 80px; }
+  #celebration h1 { color: #ff2d6f; }
+  #celebration p { margin-top: 12px; color: #6b5b8a; font-size: 17px; line-height: 1.5; }
+
+  .confetti {
+    position: fixed;
+    top: -5vh;
+    font-size: 26px;
+    z-index: 10;
+    animation: fall linear forwards;
+    pointer-events: none;
+    user-select: none;
+  }
+  @keyframes fall {
+    to { transform: translateY(115vh) rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg-heart, .emoji-top, .confetti { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div id="question">
+    <span class="emoji-top">🥺</span>
+    <h1>Pôjdeš so mnou von?</h1>
+    <p class="subtitle">Len jedna malinká otázka…</p>
+    <div class="buttons">
+      <button id="btnAno" type="button">Áno 💖</button>
+      <button id="btnNie" type="button">Nie</button>
+    </div>
+    <p class="hint" id="hint"></p>
+  </div>
+
+  <div id="celebration">
+    <span class="big">🎉</span>
+    <h1>Jeeej! Super!! 💖</h1>
+    <p>Vedel som, že povieš áno!<br>Už sa na teba teším 😍<br><br>🥰 Napíš mi, kedy máš čas! 📅</p>
+  </div>
+</div>
+
+<script>
+  var btnNie = document.getElementById('btnNie');
+  var btnAno = document.getElementById('btnAno');
+  var hint = document.getElementById('hint');
+  var dodges = 0;
+
+  var hlasky = [
+    'Hej hej, kam ideš? 😏',
+    'To tlačidlo je nejaké plaché…',
+    'Skús to ešte raz 😜',
+    'Nie-nie, takto to nepôjde!',
+    'Vzdaj to, „Nie" nechytíš 😂',
+    'Osud už rozhodol… 💘'
+  ];
+
+  function flee() {
+    dodges++;
+
+    // Nie utečie na náhodné miesto na obrazovke
+    var bw = btnNie.offsetWidth;
+    var bh = btnNie.offsetHeight;
+    var pad = 12;
+    var maxX = window.innerWidth - bw - pad;
+    var maxY = window.innerHeight - bh - pad;
+    var x = pad + Math.random() * (maxX - pad);
+    var y = pad + Math.random() * (maxY - pad);
+
+    btnNie.classList.add('fleeing');
+    btnNie.style.left = x + 'px';
+    btnNie.style.top = y + 'px';
+
+    // Áno sa zväčšuje
+    var scale = 1 + Math.min(dodges * 0.12, 0.9);
+    btnAno.style.transform = 'scale(' + scale + ')';
+
+    hint.textContent = hlasky[Math.min(dodges - 1, hlasky.length - 1)];
+
+    // po pár pokusoch sa Nie zmenší a nakoniec zmizne
+    if (dodges >= 8) {
+      btnNie.style.display = 'none';
+      hint.textContent = 'Tlačidlo „Nie" sa vyparilo 💨 Zostáva už len jedna možnosť…';
+    } else if (dodges >= 5) {
+      btnNie.style.fontSize = '13px';
+      btnNie.style.padding = '8px 16px';
+    }
+  }
+
+  // mobil: utečie hneď pri dotyku, desktop: pri prejdení myšou aj kliknutí
+  btnNie.addEventListener('touchstart', function (e) { e.preventDefault(); flee(); }, { passive: false });
+  btnNie.addEventListener('mouseenter', flee);
+  btnNie.addEventListener('click', function (e) { e.preventDefault(); flee(); });
+
+  btnAno.addEventListener('click', function () {
+    document.getElementById('question').style.display = 'none';
+    btnNie.style.display = 'none';
+    document.getElementById('celebration').classList.add('show');
+    confettiShow();
+    if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+  });
+
+  function confettiShow() {
+    var icons = ['💖', '🎉', '💘', '✨', '🌸', '💝', '🎊', '❤️'];
+    for (var i = 0; i < 60; i++) {
+      (function (i) {
+        setTimeout(function () {
+          var c = document.createElement('span');
+          c.className = 'confetti';
+          c.textContent = icons[Math.floor(Math.random() * icons.length)];
+          c.style.left = Math.random() * 100 + 'vw';
+          c.style.animationDuration = (2.2 + Math.random() * 2.5) + 's';
+          c.style.fontSize = (18 + Math.random() * 22) + 'px';
+          document.body.appendChild(c);
+          setTimeout(function () { c.remove(); }, 5500);
+        }, i * 90);
+      })(i);
+    }
+  }
+
+  // plávajúce srdiečka na pozadí
+  (function () {
+    var hearts = ['💗', '💜', '🩷', '💙'];
+    for (var i = 0; i < 12; i++) {
+      var h = document.createElement('span');
+      h.className = 'bg-heart';
+      h.textContent = hearts[i % hearts.length];
+      h.style.left = Math.random() * 100 + 'vw';
+      h.style.animationDuration = (7 + Math.random() * 8) + 's';
+      h.style.animationDelay = (Math.random() * 8) + 's';
+      h.style.fontSize = (16 + Math.random() * 20) + 'px';
+      document.body.appendChild(h);
+    }
+  })();
+</script>
+</body>
+</html>
